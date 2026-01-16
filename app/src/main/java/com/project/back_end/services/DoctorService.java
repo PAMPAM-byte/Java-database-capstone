@@ -8,9 +8,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class DoctorService {
@@ -18,52 +18,37 @@ public class DoctorService {
     private final DoctorRepository doctorRepository;
     private final AppointmentRepository appointmentRepository;
 
-    public DoctorService(DoctorRepository doctorRepository,
-                         AppointmentRepository appointmentRepository) {
+    public DoctorService(DoctorRepository doctorRepository, AppointmentRepository appointmentRepository) {
         this.doctorRepository = doctorRepository;
         this.appointmentRepository = appointmentRepository;
     }
 
-    // Q10: required method - uses doctorId + date, returns available time slots
-    public List<LocalTime> getDoctorAvailability(Long doctorId, LocalDate date) {
+    // Q10: must retrieve doctor's availability based on doctorId + date
+    public List<String> getDoctorAvailability(Long doctorId, LocalDate date) {
 
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
 
-        // Convert doctor's availableTimes (List<String>) to LocalTime
-        List<LocalTime> baseSlots = new ArrayList<>();
-        if (doctor.getAvailableTimes() != null) {
-            for (String t : doctor.getAvailableTimes()) {
-                // expects "09:00" format
-                baseSlots.add(LocalTime.parse(t));
+        // Doctor's default availability slots (from Doctor.availableTimes)
+        List<String> availableTimes = doctor.getAvailableTimes();
+
+        // Get appointments for that doctor on that date
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.plusDays(1).atStartOfDay(); // exclusive
+        List<Appointment> appointments =
+                appointmentRepository.findByDoctor_IdAndAppointmentTimeBetween(doctorId, start, end);
+
+        // Remove booked slots from availableTimes
+        Set<String> bookedSlots = new HashSet<>();
+        for (Appointment appt : appointments) {
+            if (appt.getAppointmentTime() != null) {
+                bookedSlots.add(appt.getAppointmentTime().toLocalTime().toString());
             }
         }
 
-        // If no availableTimes stored, default slots (so grader sees real output)
-        if (baseSlots.isEmpty()) {
-            baseSlots = Arrays.asList(
-                    LocalTime.of(9, 0),
-                    LocalTime.of(10, 0),
-                    LocalTime.of(11, 0),
-                    LocalTime.of(14, 0)
-            );
-        }
+        // Keep only the free slots
+        availableTimes.removeIf(bookedSlots::contains);
 
-        // Find booked appointments for that doctor on that date
-        LocalDateTime start = date.atStartOfDay();
-        LocalDateTime end = date.plusDays(1).atStartOfDay();
-
-        List<Appointment> booked = appointmentRepository
-                .findByDoctor_IdAndAppointmentTimeBetween(doctorId, start, end);
-
-        Set<LocalTime> bookedTimes = booked.stream()
-                .map(a -> a.getAppointmentTime().toLocalTime())
-                .collect(Collectors.toSet());
-
-        // Remove booked times from baseSlots
-        return baseSlots.stream()
-                .filter(t -> !bookedTimes.contains(t))
-                .sorted()
-                .collect(Collectors.toList());
+        return availableTimes;
     }
 }
