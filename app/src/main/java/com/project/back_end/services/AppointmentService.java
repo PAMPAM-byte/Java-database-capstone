@@ -1,22 +1,31 @@
 package com.project.back_end.services;
 
 import com.project.back_end.models.Appointment;
+import com.project.back_end.repo.AppointmentRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class AppointmentService {
 
-    // Save / book an appointment
-    public Appointment bookAppointment(Appointment appointment) {
-        return appointment;
+    private final AppointmentRepository appointmentRepository;
+
+    public AppointmentService(AppointmentRepository appointmentRepository) {
+        this.appointmentRepository = appointmentRepository;
     }
 
-    // Retrieve appointments for a doctor on a given date
+    // Q6: must actually save to DB
+    public Appointment bookAppointment(Appointment appointment) {
+        return appointmentRepository.save(appointment);
+    }
+
+    // Q6: must actually query DB using doctorId + date
     public List<Appointment> getAppointmentsByDoctorAndDate(Long doctorId, LocalDate date) {
-        return new ArrayList<>();
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.plusDays(1).atStartOfDay(); // exclusive
+        return appointmentRepository.findByDoctor_IdAndAppointmentTimeBetween(doctorId, start, end);
     }
 }
