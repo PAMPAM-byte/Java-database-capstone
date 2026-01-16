@@ -3,7 +3,9 @@ package com.project.back_end.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "doctors")
@@ -40,13 +42,18 @@ public class Doctor {
     private String phone;
 
     @ElementCollection
-    @CollectionTable(name = "doctor_available_times", joinColumns = @JoinColumn(name = "doctor_id"))
+    @CollectionTable(
+        name = "doctor_available_times",
+        joinColumns = @JoinColumn(name = "doctor_id")
+    )
     @Column(name = "available_time")
     private List<String> availableTimes;
 
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Appointment> appointments = new ArrayList<>();
+
     // Constructors
-    public Doctor() {
-    }
+    public Doctor() {}
 
     public Doctor(String name, String specialty, String email, String password, String phone) {
         this.name = name;
@@ -111,5 +118,13 @@ public class Doctor {
 
     public void setAvailableTimes(List<String> availableTimes) {
         this.availableTimes = availableTimes;
+    }
+
+    public List<Appointment> getAppointments() {
+        return appointments;
+    }
+
+    public void setAppointments(List<Appointment> appointments) {
+        this.appointments = appointments;
     }
 }
