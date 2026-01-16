@@ -11,16 +11,18 @@ import java.util.Date;
 @Service
 public class TokenService {
 
-    // 1 hour expiration (you can change, but keep it present)
+    // 1 hour token validity (you can change)
     private static final long EXPIRATION_MS = 60 * 60 * 1000;
 
-    // REQUIRED: method to return signing key
-    private Key getSigningKey() {
-        // Generates a secure random key for HS256
-        return Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    // Signing key for JWT
+    private final Key signingKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+
+    // REQUIRED: method that returns a signing key
+    public Key getSigningKey() {
+        return signingKey;
     }
 
-    // REQUIRED: generate JWT using Jwts.builder(), issuedAt, expiration
+    // REQUIRED: generates a JWT using Jwts.builder(), with issuedAt and expiration
     public String generateToken(String username) {
         Date issuedAt = new Date();
         Date expiration = new Date(issuedAt.getTime() + EXPIRATION_MS);
@@ -31,5 +33,18 @@ public class TokenService {
                 .setExpiration(expiration)
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    // Optional helper (nice for your controllers/services)
+    public boolean isTokenValid(String token) {
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
