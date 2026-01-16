@@ -1,11 +1,20 @@
-FROM eclipse-temurin:17-jdk
+# ---- Build stage ----
+FROM maven:3.9.9-eclipse-temurin-17 AS build
+WORKDIR /build
 
-WORKDIR /app
-
+# copy everything
 COPY . .
 
-RUN ./mvnw clean package -DskipTests
+# build only the backend
+WORKDIR /build/app
+RUN mvn -q -DskipTests clean package
+
+# ---- Run stage ----
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+
+# copy the built jar with an explicit name
+COPY --from=build /build/app/target/*.jar /app/app.jar
 
 EXPOSE 8080
-
-CMD ["java", "-jar", "target/*.jar"]
+CMD ["java", "-jar", "/app/app.jar"]
